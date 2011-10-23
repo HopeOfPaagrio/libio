@@ -78,7 +78,7 @@ ioendpoint_release(struct ioendpoint *endp);
  *
  * \param endp	Endpoint to format.
  * \returns	On success, a string representation of the endpoint.
- *		Otherwise, \c NULL is returned and \c errno is set to
+ *		Otherwise, \c NULL is returned and \e errno is set to
  *		indicate the error.
  * \note	The endpoint remains owner of the returned string.
  */

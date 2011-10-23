@@ -56,7 +56,7 @@ typedef void (ioevent_cb_t)(int num, void *arg);
  * \param arg	Additional argument to pass to \a cb.
  * \param opt	Event options.
  * \return	On success, a pointer to a newly allocated event is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioevent *
@@ -72,7 +72,7 @@ ioevent_read(int fd, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt);
  * \param arg	Additional argument to pass to \a cb.
  * \param opt	Event options.
  * \return	On success, a pointer to a newly allocated event is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioevent *
@@ -88,7 +88,7 @@ ioevent_write(int fd, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt);
  * \param arg	additional argument to pass to \a cb.
  * \param opt	Event options.
  * \return	On success, a pointer to a newly allocated event is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioevent *
@@ -105,7 +105,7 @@ ioevent_timer(const struct timeval *tv, ioevent_cb_t *cb, void *arg,
  * \param arg	Additional argument to pass to \a cb.
  * \param opt	Event options.
  * \return	On success, a pointer to a newly allocated event is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioevent *
@@ -121,7 +121,7 @@ ioevent_signal(int sig, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt);
  * \param arg	Additional argument to pass to \a cb.
  * \param opt	Event options.
  * \return	On success, a pointer to a newly allocated event is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioevent *
@@ -145,7 +145,7 @@ ioevent_free(struct ioevent *event);
  *
  * \param event	Event to attach.
  * \param loop	Loop to attach it to.
- * \return	On success, 0 is returned. Otherwise, -1 is returned and \c
+ * \return	On success, 0 is returned. Otherwise, -1 is returned and \e
  *		errno is set to indicate the error.
  * \see		ioevent_detach()
  */
@@ -158,7 +158,7 @@ ioevent_attach(struct ioevent *event, struct ioloop *loop);
  * detached.
  *
  * \param event	Event to detach.
- * \return	On success, 0 is returned. Otherwise, -1 is returned and \c
+ * \return	On success, 0 is returned. Otherwise, -1 is returned and \e
  *		errno is set to indicate the error.
  * \see		ioevent_attach()
  */

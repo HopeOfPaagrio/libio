@@ -45,7 +45,7 @@ enum ioevent_kind {
  *		whose kind is not among the requested kinds of events will
  *		fail.
  * \returns	On success, a pointer to a newly allocated I/O loop is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  */
 IOAPI struct ioloop *
@@ -63,7 +63,7 @@ ioloop_free(struct ioloop *loop);
  * Run an I/O loop exactly once.
  *
  * \param loop	I/O loop to run.
- * \return	On success, 0 is returned. Otherwise, -1 is returned and \c
+ * \return	On success, 0 is returned. Otherwise, -1 is returned and \e
  *		errno is set to indicate the error.
  */
 IOAPI int
@@ -75,7 +75,7 @@ ioloop_once(struct ioloop *loop);
  * \param loop	The event loop to run.
  * \return	When ioloop_break() is called, 0 is returned. If an error
  *		occurs before ioloop_break() is called, -1 is returned and
- *		\c errno is set to indicate the error.
+ *		\e errno is set to indicate the error.
  */
 IOAPI int
 ioloop_run(struct ioloop *loop);

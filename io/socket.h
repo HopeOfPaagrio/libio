@@ -37,7 +37,7 @@ ioendpoint_socket_ops;
  *
  * \param addr	Socket address to create an endpoint for.
  * \returns	On success, a pointer to a newly-allocated endpoint is
- *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
  *		to indicate the error.
  * \note	The caller is responsible for calling ioendpoint_release()
  *		to free the endpoint.
