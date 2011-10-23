@@ -30,6 +30,15 @@
 #define nitems(arr)	(sizeof(arr) / sizeof((arr)[0]))
 
 /*
+ * Compiler features
+ */
+#ifdef __GNUC__
+# define UNUSED(x)	unused_ ## x __attribute__ ((unused))
+#else
+# define UNUSED(x)	unused_ ## x
+#endif
+
+/*
  * Internal-use event options
  */
 enum {

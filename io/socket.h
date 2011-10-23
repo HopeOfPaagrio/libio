@@ -14,37 +14,37 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef IO_DEFS_H
-#define IO_DEFS_H
+#ifndef IO_SOCKET_H
+#define IO_SOCKET_H
 
-#include <stddef.h>
-#include <sys/types.h>
-
-/*
- * C++ compatibility
- */
-#ifdef __cplusplus
-# define IO_BEGIN_DECLS	extern "C" {
-# define IO_END_DECLS	}
-#else
-# define IO_BEGIN_DECLS
-# define IO_END_DECLS
-#endif
-
-/*
- * Public API
- */
-#define IOAPI	extern
+#include <io/defs.h>
 
 IO_BEGIN_DECLS
 
 /*
- * Types of handle
+ * Actually in <sys/socket.h>, but this is for convenience
  */
-struct ioloop;
-struct ioevent;
-struct ioendpoint;
+struct sockaddr;
+
+/**
+ * Socket endpoint operations.
+ */
+IOAPI const struct ioendpoint_ops
+ioendpoint_socket_ops;
+
+/**
+ * Allocate a new endpoint holding a socket address.
+ *
+ * \param addr	Socket address to create an endpoint for.
+ * \returns	On success, a pointer to a newly-allocated endpoint is
+ *		returned. Otherwise, \c NULL is returned and \c errno is set
+ *		to indicate the error.
+ * \note	The caller is responsible for calling ioendpoint_release()
+ *		to free the endpoint.
+ */
+IOAPI struct ioendpoint *
+ioendpoint_alloc_socket(const struct sockaddr *addr);
 
 IO_END_DECLS
 
-#endif /* IO_DEFS_H */
+#endif /* IO_SOCKET_H */

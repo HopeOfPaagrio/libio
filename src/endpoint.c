@@ -14,37 +14,43 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef IO_DEFS_H
-#define IO_DEFS_H
+#include <io/endpoint.h>
+#include "private.h"
 
-#include <stddef.h>
-#include <sys/types.h>
+#include <stdlib.h>
 
-/*
- * C++ compatibility
- */
-#ifdef __cplusplus
-# define IO_BEGIN_DECLS	extern "C" {
-# define IO_END_DECLS	}
-#else
-# define IO_BEGIN_DECLS
-# define IO_END_DECLS
-#endif
+struct ioendpoint *
+ioendpoint_retain(struct ioendpoint *endp)
+{
+	if (endp != NULL)
+		endp->refs++;
 
-/*
- * Public API
- */
-#define IOAPI	extern
+	return endp;
+}
 
-IO_BEGIN_DECLS
+void
+ioendpoint_release(struct ioendpoint *endp)
+{
+	if (endp != NULL && --endp->refs == 0) {
+		endp->ops->done(endp);
+		free(endp->str);
+		free(endp);
+	}
+}
 
-/*
- * Types of handle
- */
-struct ioloop;
-struct ioevent;
-struct ioendpoint;
+const char *
+ioendpoint_format(struct ioendpoint *endp)
+{
+	if (endp->str == NULL) {
+		size_t len;
 
-IO_END_DECLS
+		len = endp->ops->format(endp, NULL, 0);
+		endp->str = malloc(len);
+		if (endp->str == NULL)
+			return NULL;
 
-#endif /* IO_DEFS_H */
+		endp->ops->format(endp, endp->str, len);
+	}
+
+	return endp->str;
+}

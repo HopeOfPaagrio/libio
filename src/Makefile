@@ -1,7 +1,7 @@
 VERSION		= 0.1
 CFLAGS		+= -g -Wall -Wextra
 CPPFLAGS	+= -I.. -MMD -MP -DVERSION=\"$(VERSION)\"
-SRCS		= event.c loop.c select.c
+SRCS		= event.c loop.c select.c endpoint.c endpoint_socket.c
 OBJDIR		:= obj-$(shell uname -s)-$(shell uname -r)
 OBJS		:= $(SRCS:%.c=$(OBJDIR)/%.o)
 
