@@ -23,7 +23,7 @@
 #include "list.h"
 
 #include <assert.h>
-#include <stdbool.h>
+#include <errno.h>
 #include <stdint.h>
 #include <sys/time.h>
 
