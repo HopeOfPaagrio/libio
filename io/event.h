@@ -31,22 +31,6 @@ enum ioevent_opt {
 };
 
 /**
- * Type of an event callback function.
- *
- * \param num	Argument whose meaning depends on the kind of event:
- *		 - \link ioevent_read() Read\endlink or \link ioevent_write()
- *		   write\endlink events: the file descriptor that is being
- *		   monitored.
- *		 - \link ioevent_signal() Signal\endlink events: the signal
- *		   that is being monitored.
- *		 - \link ioevent_child() Child\endlink events: the exit code
- *		   the child process being monitored terminated with.
- *		 - For all other events, this parameter has no meaning.
- * \param arg	Additional argument passed to the event allocation function.
- */
-typedef void (ioevent_cb_t)(int num, void *arg);
-
-/**
  * Allocate an event monitoring a file for readability. The event can be
  * attached to any I/O loop that was allocated with \c #IOEVENT_READ set.
  *

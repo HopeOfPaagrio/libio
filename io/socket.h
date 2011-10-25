@@ -45,6 +45,67 @@ ioendpoint_socket_ops;
 IOAPI struct ioendpoint *
 ioendpoint_alloc_socket(const struct sockaddr *addr);
 
+/**
+ * Allocate a new I/O queue communicating over a socket.
+ *
+ * \param af	Address family for the socket, or AF_UNSPEC if this is to be
+ *		gained from the \a to or \a from endpoints.
+ * \param to	Default endpoint to send datagrams to, or \c NULL not to set
+ *		a default endpoint.
+ * \param from	Local endpoint to send datagrams from, or \c NULL not to set
+ *		a specific local endpoint (one will be assigned).
+ * \returns	On success, a pointer to a new I/O queue is returned.
+ *		Otherwise, \c NULL is returned and \e errno is set to
+ *		indicate the error.
+ */
+IOAPI struct ioqueue *
+ioqueue_alloc_socket(int af, struct ioendpoint *to, struct ioendpoint *from,
+                     const struct ioparam_init *inits, size_t ninits);
+
+/**
+ * Set or clear the flag indicating whether an IPv6 socket should only
+ * accept IPv6 traffic.
+ *
+ * \param queue	Queue to operate on.
+ * \param value	Value of the flag.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+#define ioqueue_socket_v6only(queue, value)                                 \
+	ioqueue_set((queue), &ioqueue_socket_v6only, (value)? true : false)
+
+IOAPI const struct ioparam
+ioqueue_socket_v6only;
+
+/**
+ * Set or clear the number of hops multicast traffic may take.
+ *
+ * \param queue	Queue to operate on.
+ * \param hops	Number of hops.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+#define ioqueue_socket_mcast_hops(queue, hops)                              \
+	ioqueue_set((queue), &ioqueue_socket_mcast_hops, (int) (hops))
+
+IOAPI const struct ioparam
+ioqueue_socket_mcast_hops;
+
+/**
+ * Set or clear whether the local endpoint should be re-used.
+ *
+ * \param queue	Queue to operate on.
+ * \param value	Value of the flag.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+#define ioqueue_socket_reuselocal(queue, value)                             \
+	ioqueue_set((queue), &ioqueue_socket_reuselocal,                    \
+	            (value)? true : false)
+
+IOAPI const struct ioparam
+ioqueue_socket_reuselocal;
+
 IO_END_DECLS
 
 #endif /* IO_SOCKET_H */

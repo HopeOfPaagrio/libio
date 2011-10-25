@@ -45,6 +45,53 @@ IO_BEGIN_DECLS
 struct ioloop;
 struct ioevent;
 struct ioendpoint;
+struct ioqueue;
+
+enum ioevent_kind;
+enum ioevent_opt;
+
+/**
+ * Type of an event callback function.
+ *
+ * \param num	Argument whose meaning depends on the kind of event:
+ *		 - \link ioevent_read() Read\endlink or \link ioevent_write()
+ *		   write\endlink events: the file descriptor that is being
+ *		   monitored.
+ *		 - \link ioevent_signal() Signal\endlink events: the signal
+ *		   that is being monitored.
+ *		 - \link ioevent_child() Child\endlink events: the exit code
+ *		   the child process being monitored terminated with.
+ *		 - For all other events, this parameter has no meaning.
+ * \param arg	Additional argument passed to the event allocation function.
+ */
+typedef void (ioevent_cb_t)(int num, void *arg);
+
+/**
+ * I/O buffer structure for scatter/gather I/O. Should be compatible with
+ * struct iovec, but since we'd rather not rely on <sys/uio.h> we provide
+ * our own.
+ */
+struct iobuf {
+	void	*base;			/**< Buffer starting address. */
+	size_t	 len;			/**< Length of buffer in bytes. */
+};
+
+/**
+ * I/O parameter structure, for configuring I/O queues. These are identified
+ * by their address.
+ */
+struct ioparam {
+	const char	*name;		/**< Parameter name, for debugging
+					 *   purposes. */
+};
+
+/**
+ * Parameter initialisation structure.
+ */
+struct ioparam_init {
+	const struct ioparam	*param;
+	uintptr_t		 value;
+};
 
 IO_END_DECLS
 
