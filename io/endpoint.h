@@ -25,6 +25,8 @@ IO_BEGIN_DECLS
  * Endpoint operations.
  */
 struct ioendpoint_ops {
+	size_t		 size;		/**< Size of endpoint structure. */
+
 	/**
 	 * Free resources allocated to an endpoint.
 	 *
@@ -44,7 +46,45 @@ struct ioendpoint_ops {
 	 *		\c NULL and \a len as 0.
 	 */
 	size_t
-	(*format)(struct ioendpoint *endp, char *buf, size_t len);
+	(*format)(struct ioendpoint *endp, char *buf, size_t len);	
+
+	/**
+	 * Convert an endpoint to an endpoint of a different type.
+	 *
+	 * \param endp	Endpoint to convert.
+	 * \param ops	Type to convert to, indicated by its operations
+	 *		structure.
+	 * \returns	On success, a new endpoint holding the result of the
+	 *		conversion. Otherwise, \c NULL is returned and \e
+	 *		errno is set to indicate the error.
+	 * \note	The caller is responsible for calling
+	 *		ioendpoint_release() to free the endpoint.
+	 */
+	struct ioendpoint *
+	(*convert)(struct ioendpoint *endp, const struct ioendpoint_ops *ops);
+
+	/**
+	 * Determine if an endpoint is equal to another endpoint.
+	 *
+	 * \param a	First endpoint.
+	 * \param b	Second endpoint.
+	 * \returns	If \a a equals \a b, \c true is returned, otherwise \c false
+	 *		is returned.
+	 */
+	bool
+	(*equals)(struct ioendpoint *a, struct ioendpoint *b);
+
+	/**
+	 * Compare two endpoints.
+	 *
+	 * \param a	First endpoint.
+	 * \param b	Second endpoint.
+	 * \returns	An integer which is less than zero, equal to zero or greater
+	 *		than zero if \a a is respectively less than, equal to or
+	 *		greater than \a b.
+	 */
+	int
+	(*compare)(struct ioendpoint *a, struct ioendpoint *b);
 };
 
 /**
@@ -55,6 +95,16 @@ struct ioendpoint {
 	unsigned int			 refs;	/**< Number of references. */
 	char				*str;	/**< String representation. */
 };
+
+/**
+ * Allocate a new endpoint with the specified operations.
+ *
+ * \param ops	Operations for the endpoint.
+ * \note	The caller is responsible for calling ioendpoint_release()
+ *		to free the endpoint.
+ */
+IOAPI struct ioendpoint *
+ioendpoint_alloc(const struct ioendpoint_ops *ops);
 
 /**
  * Increase the reference count of an endpoint.
@@ -84,6 +134,43 @@ ioendpoint_release(struct ioendpoint *endp);
  */
 IOAPI const char *
 ioendpoint_format(struct ioendpoint *endp);
+
+/**
+ * Convert an endpoint to an endpoint of a different type.
+ *
+ * \param endp	Endpoint to convert.
+ * \param ops	Type to convert to, indicated by its operations structure.
+ * \returns	On success, a new endpoint holding the result of the
+ *		conversion. Otherwise, \c NULL is returned and \e errno is
+ *		set to indicate the error.
+ * \note	The caller is responsible for calling ioendpoint_release()
+ *		to free the endpoint.
+ */
+IOAPI struct ioendpoint *
+ioendpoint_convert(struct ioendpoint *endp, const struct ioendpoint_ops *ops);
+
+/**
+ * Determine if an endpoint is equal to another endpoint.
+ *
+ * \param a	First endpoint.
+ * \param b	Second endpoint.
+ * \returns	If \a a equals \a b, \c true is returned, otherwise \c false
+ *		is returned.
+ */
+IOAPI bool
+ioendpoint_equals(struct ioendpoint *a, struct ioendpoint *b);
+
+/**
+ * Compare two endpoints.
+ *
+ * \param a	First endpoint.
+ * \param b	Second endpoint.
+ * \returns	An integer which is less than zero, equal to zero or greater
+ *		than zero if \a a is respectively less than, equal to or
+ *		greater than \a b.
+ */
+IOAPI int
+ioendpoint_compare(struct ioendpoint *a, struct ioendpoint *b);
 
 IO_END_DECLS
 

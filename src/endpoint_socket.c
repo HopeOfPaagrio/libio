@@ -16,12 +16,11 @@
 
 #include <io/endpoint.h>
 #include <io/socket.h>
-#include "private.h"
+#include "private_socket.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #if defined(AF_INET) || defined(AF_INET6)
 # include <arpa/inet.h>
@@ -32,19 +31,18 @@
 # include <sys/un.h>
 #endif
 
-struct ioendpoint_socket {
-	struct ioendpoint	 endpoint;
-	struct sockaddr_storage	 addr;
-	socklen_t		 addrlen;
-};
-
 static void	 socket_done(struct ioendpoint *);
 static size_t	 socket_format(struct ioendpoint *, char *, size_t);
+static bool	 socket_equals(struct ioendpoint *, struct ioendpoint *);
+static int	 socket_compare(struct ioendpoint *, struct ioendpoint *);
 
 const struct ioendpoint_ops
 ioendpoint_socket_ops = {
-	.done	= socket_done,
-	.format	= socket_format
+	.size		= sizeof(struct ioendpoint_socket),
+	.done		= socket_done,
+	.format		= socket_format,
+	.equals		= socket_equals,
+	.compare	= socket_compare
 };
 
 static void
@@ -121,18 +119,71 @@ socket_format(struct ioendpoint *e, char *buf, size_t len)
 	return 0;
 }
 
+static bool
+socket_equals(struct ioendpoint *a, struct ioendpoint *b)
+{
+	return socket_compare(a, b) == 0;
+}
+
+static int
+socket_compare(struct ioendpoint *l, struct ioendpoint *r)
+{
+	struct ioendpoint_socket *a = (struct ioendpoint_socket *) l;
+	struct ioendpoint_socket *b = (struct ioendpoint_socket *) r;
+
+	if (a->addr.ss_family < b->addr.ss_family) return -1;
+	if (a->addr.ss_family > b->addr.ss_family) return 1;
+
+	switch (a->addr.ss_family) {
+#ifdef AF_INET
+	case AF_INET: {
+		struct sockaddr_in *asin = (struct sockaddr_in *) &a->addr;
+		struct sockaddr_in *bsin = (struct sockaddr_in *) &b->addr;
+
+		if (ntohs(asin->sin_port) < ntohs(bsin->sin_port)) return -1;
+		if (ntohs(asin->sin_port) > ntohs(bsin->sin_port)) return 1;
+
+		return memcmp(&asin->sin_addr, &bsin->sin_addr,
+		              sizeof(asin->sin_addr));
+	}
+#endif
+
+#ifdef AF_INET6
+	case AF_INET6: {
+		struct sockaddr_in6 *asin6 = (struct sockaddr_in6 *) &a->addr;
+		struct sockaddr_in6 *bsin6 = (struct sockaddr_in6 *) &b->addr;
+
+		if (ntohs(asin6->sin6_port) < ntohs(bsin6->sin6_port)) return -1;
+		if (ntohs(asin6->sin6_port) > ntohs(bsin6->sin6_port)) return 1;
+
+		return memcmp(&asin6->sin6_addr, &bsin6->sin6_addr,
+		              sizeof(asin6->sin6_addr));
+	}
+#endif
+
+#ifdef AF_INET6
+	case AF_UNIX: {
+		struct sockaddr_un *asun = (struct sockaddr_un *) &a->addr;
+		struct sockaddr_un *bsun = (struct sockaddr_un *) &b->addr;
+
+		return memcmp(&asun->sun_path, &bsun->sun_path,
+		              sizeof(asun->sun_path));
+	}
+#endif
+	}
+
+	return 0;
+}
+
 struct ioendpoint *
 ioendpoint_alloc_socket(const struct sockaddr *addr)
 {
 	struct ioendpoint_socket *endp;
 
 	/* allocate a new endpoint */
-	endp = calloc(1, sizeof(*endp));
+	endp = (struct ioendpoint_socket *) ioendpoint_alloc(&ioendpoint_socket_ops);
 	if (endp == NULL)
 		return NULL;
-
-	endp->endpoint.ops = &ioendpoint_socket_ops;
-	endp->endpoint.refs = 1;
 
 	/* perform address-family-dependent initialisation */
 	switch (addr->sa_family) {

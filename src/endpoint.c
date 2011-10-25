@@ -20,6 +20,22 @@
 #include <stdlib.h>
 
 struct ioendpoint *
+ioendpoint_alloc(const struct ioendpoint_ops *ops)
+{
+	struct ioendpoint *endp;
+
+	/* allocate and initialise a new endpoint */
+	endp = calloc(1, ops->size);
+	if (endp == NULL)
+		return NULL;
+
+	endp->ops = ops;
+	endp->refs = 1;
+
+	return endp;
+}
+
+struct ioendpoint *
 ioendpoint_retain(struct ioendpoint *endp)
 {
 	if (endp != NULL)
@@ -53,4 +69,39 @@ ioendpoint_format(struct ioendpoint *endp)
 	}
 
 	return endp->str;
+}
+
+struct ioendpoint *
+ioendpoint_convert(struct ioendpoint *endp, const struct ioendpoint_ops *ops)
+{
+	if (endp->ops == ops)
+		return ioendpoint_retain(endp);
+
+	if (endp->ops->convert == NULL) {
+		errno = EINVAL;
+		return NULL;
+	}
+
+	return endp->ops->convert(endp, ops);
+}
+
+bool
+ioendpoint_equals(struct ioendpoint *a, struct ioendpoint *b)
+{
+	if (a == b)
+		return true;
+
+	if (a->ops != b->ops)
+		return false;
+
+	return a->ops->equals(a, b);
+}
+
+int
+ioendpoint_compare(struct ioendpoint *a, struct ioendpoint *b)
+{
+	if (a->ops < b->ops) return -1;
+	if (a->ops > b->ops) return 1;
+
+	return a->ops->compare(a, b);
 }
