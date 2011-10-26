@@ -46,6 +46,24 @@ ioqueue_free(struct ioqueue *queue)
 	return r;
 }
 
+int
+ioqueue_attach(struct ioqueue *queue, struct ioloop *loop)
+{
+	if (queue->ops->attach != NULL)
+		return queue->ops->attach(queue, loop);
+
+	return 0;
+}
+
+int
+ioqueue_detach(struct ioqueue *queue)
+{
+	if (queue->ops->detach != NULL)
+		return queue->ops->detach(queue);
+
+	return 0;
+}
+
 ssize_t
 ioqueue_maxsize(struct ioqueue *queue)
 {

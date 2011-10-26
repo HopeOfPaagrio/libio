@@ -38,6 +38,28 @@ struct ioqueue_ops {
 	(*done)(struct ioqueue *queue);
 
 	/**
+	 * Attach any internal event handlers of an I/O queue to an I/O loop.
+	 *
+	 * \param queue	I/O queue to operate on.
+	 * \param loop	I/O loop to attach to.
+	 * \returns	On success, 0 is returned. Otherwise, -1 is returned
+	 *		and \e errno is set to indicate the error.
+	 */
+	int
+	(*attach)(struct ioqueue *queue, struct ioloop *loop);
+
+	/**
+	 * Detach any internal event handlers of an I/O queue from their
+	 * attached I/O loop.
+	 *
+	 * \param queue	I/O queue to operate on.
+	 * \returns	On success, 0 is returned. Otherwise, -1 is returned
+	 *		and \e errno is set to indicate the error.
+	 */
+	int
+	(*detach)(struct ioqueue *queue);
+
+	/**
 	 * Get the maximum datagram size that can be sent through an I/O
 	 * queue.
 	 *
@@ -169,6 +191,28 @@ struct ioqueue {
  */
 IOAPI int
 ioqueue_free(struct ioqueue *queue);
+
+/**
+ * Attach any internal event handlers of an I/O queue to an I/O loop.
+ *
+ * \param queue	I/O queue to operate on.
+ * \param loop	I/O loop to attach to.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+int
+ioqueue_attach(struct ioqueue *queue, struct ioloop *loop);
+
+/**
+ * Detach any internal event handlers of an I/O queue from their attached
+ * I/O loop.
+ *
+ * \param queue	I/O queue to operate on.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+int
+ioqueue_detach(struct ioqueue *queue);
 
 /**
  * Get the maximum datagram size that can be sent through an I/O queue.
@@ -380,6 +424,63 @@ ioqueue_mcast_leave;
 
 IOAPI const struct ioparam
 ioqueue_mcast_loop;
+
+
+/**
+ * Allocate a rate-limiting I/O queue.
+ *
+ * \param base	Base queue to rate-limit.
+ * \returns	On success, a newly-allocated I/O queue is returned.
+ *		Otherwise, \c NULL is returned and \e errno is set to
+ *		indicate the error.
+ */
+IOAPI struct ioqueue *
+ioqueue_alloc_limit(struct ioqueue *base);
+
+/**
+ * Set the maximum send rate for a rate-limited I/O queue.
+ *
+ * \param queue	Queue to operate on.
+ * \param value	Maximum send rate, in bytes per second.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+#define ioqueue_limit_send(queue, value)                                    \
+	ioqueue_set((queue), &ioqueue_limit_send, (value))
+
+IOAPI const struct ioparam
+ioqueue_limit_send;
+
+/**
+ * Set the maximum receive rate for a rate-limited I/O queue.
+ *
+ * \param queue	Queue to operate on.
+ * \param value	Maximum receive rate, in bytes per second.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+#define ioqueue_limit_recv(queue, value)                                    \
+	ioqueue_set((queue), &ioqueue_limit_recv, (value))
+
+IOAPI const struct ioparam
+ioqueue_limit_recv;
+
+/**
+ * Allocate a rate-monitoring I/O queue.
+ *
+ * \param base	Base queue to monitor.
+ * \returns	On success, a newly-allocated I/O queue is returned.
+ *		Otherwise, \c NULL is returned and \e errno is set to
+ *		indicate the error.
+ */
+IOAPI struct ioqueue *
+ioqueue_alloc_rate(struct ioqueue *base);
+
+IOAPI const struct ioparam
+ioqueue_rate_send;
+
+IOAPI const struct ioparam
+ioqueue_rate_recv;
 
 IO_END_DECLS
 
