@@ -183,13 +183,16 @@ once_more_with_timers(struct ioloop *loop, const struct timeval *start,
 
 	/* calculate the timeout */
 	if (loop->numtimers != 0) {
+		static const struct timeval zero = { 0, 0 };
+
 		timer = loop->timers[0];
 
 		/* take debt into account */
 		timersub(&timer->remain, &loop->timerdebt, &tv);
 
 		/* call the backend */
-		if (loop->backend->go(loop, &tv) < 0)
+		if (timercmp(&tv, &zero, >=) &&
+		    loop->backend->go(loop, &tv) < 0)
 			return -1;
 	} else {
 		/* call the backend */
