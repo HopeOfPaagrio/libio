@@ -61,33 +61,26 @@ struct ioqueue_socket {
 static int		 socket_done(struct ioqueue *);
 static ssize_t		 socket_maxsize(struct ioqueue *);
 static ssize_t		 socket_nextsize(struct ioqueue *);
-static int		 socket_send(struct ioqueue *, const struct iobuf *,
-			             size_t);
-static int		 socket_sendto(struct ioqueue *, const struct iobuf *,
-			               size_t, struct ioendpoint *);
-static ssize_t		 socket_recv(struct ioqueue *, const struct iobuf *,
-			             size_t);
-static ssize_t		 socket_recvfrom(struct ioqueue *,
-			         const struct iobuf *, size_t,
-			         struct ioendpoint **);
+static ssize_t		 socket_send(struct ioqueue *, size_t,
+			     const struct iobuf *, struct ioendpoint *);
+static ssize_t		 socket_recv(struct ioqueue *, size_t,
+			     const struct iobuf *, struct ioendpoint **);
 static struct ioevent	*socket_send_event(struct ioqueue *, ioevent_cb_t *,
-			                   void *, enum ioevent_opt);
+			     void *, enum ioevent_opt);
 static struct ioevent	*socket_recv_event(struct ioqueue *, ioevent_cb_t *,
-			                   void *, enum ioevent_opt);
+			     void *, enum ioevent_opt);
 static int		 socket_get(struct ioqueue *,
-			               const struct ioparam *, uintptr_t *);
+			     const struct ioparam *, uintptr_t *);
 static int		 socket_set(struct ioqueue *,
-			               const struct ioparam *, uintptr_t);
+			     const struct ioparam *, uintptr_t);
 
-const struct ioqueue_ops
-ioqueue_socket_ops = {
+static const struct ioqueue_ops
+socket_ops = {
 	.done		= socket_done,
 	.maxsize	= socket_maxsize,
 	.nextsize	= socket_nextsize,
 	.send		= socket_send,
-	.sendto		= socket_sendto,
 	.recv		= socket_recv,
-	.recvfrom	= socket_recvfrom,
 	.send_event	= socket_send_event,
 	.recv_event	= socket_recv_event,
 	.get		= socket_get,
@@ -129,102 +122,62 @@ socket_nextsize(struct ioqueue *q)
 	return val;
 }
 
-static int
-socket_send(struct ioqueue *q, const struct iobuf *bufs, size_t nbufs)
-{
-	struct ioqueue_socket	*queue = (struct ioqueue_socket *) q;
-	struct iovec		*iov;
-	size_t			 i;
-
-	/* convert buffers */
-	iov = alloca(nbufs * sizeof(*iov));
-	for (i = 0; i < nbufs; i++) {
-		iov[i].iov_base = bufs[i].base;
-		iov[i].iov_len = bufs[i].len;
-	}
-
-	/* perform the send */
-	if (writev(queue->sock, iov, nbufs) < 0)
-		return -1;
-
-	return 0;
-}
-
-static int
-socket_sendto(struct ioqueue *q, const struct iobuf *bufs, size_t nbufs,
-              struct ioendpoint *e)
-{
-	struct ioqueue_socket	*queue = (struct ioqueue_socket *) q;
-	struct ioendpoint_socket*endp;
-	struct iovec		*iov;
-	struct msghdr		 msghdr;
-	size_t			 i;
-	int			 r;
-
-	/* convert endpoint address */
-	endp = (struct ioendpoint_socket *)
-	    ioendpoint_convert(e, &ioendpoint_socket_ops);
-	if (endp == NULL) {
-		errno = EAFNOSUPPORT;
-		return -1;
-	}
-
-	/* convert buffers */
-	iov = alloca(nbufs * sizeof(*iov));
-	for (i = 0; i < nbufs; i++) {
-		iov[i].iov_base = bufs[i].base;
-		iov[i].iov_len = bufs[i].len;
-	}
-
-	/* set up the message header */
-	memset(&msghdr, '\0', sizeof(msghdr));
-	msghdr.msg_name = &endp->addr;
-	msghdr.msg_namelen = endp->addrlen;
-	msghdr.msg_iov = iov;
-	msghdr.msg_iovlen = nbufs;
-
-	/* perform the send */
-	r = sendmsg(queue->sock, &msghdr, 0) < 0? -1 : 0;
-
-	/* release the endpoint address */
-	ioendpoint_release((struct ioendpoint *) endp);
-
-	return r;
-}
-
 static ssize_t
-socket_recv(struct ioqueue *q, const struct iobuf *bufs, size_t nbufs)
+socket_send(struct ioqueue *q, size_t nbufs, const struct iobuf *bufs,
+            struct ioendpoint *t)
 {
 	struct ioqueue_socket	*queue = (struct ioqueue_socket *) q;
 	struct iovec		*iov;
-	size_t			 i;
-
-	/* convert buffers */
-	iov = alloca(nbufs * sizeof(*iov));
-	for (i = 0; i < nbufs; i++) {
-		iov[i].iov_base = bufs[i].base;
-		iov[i].iov_len = bufs[i].len;
-	}
-
-	/* perform the receive */
-	return readv(queue->sock, iov, nbufs);
-}
-
-static ssize_t
-socket_recvfrom(struct ioqueue *q, const struct iobuf *bufs, size_t nbufs,
-                struct ioendpoint **e)
-{
-	struct ioqueue_socket	*queue = (struct ioqueue_socket *) q;
-	struct ioendpoint_socket*endp;
-	struct iovec		*iov;
-	struct msghdr		 msghdr;
 	size_t			 i;
 	ssize_t			 size;
 
-	/* create the endpoint to hold the sender address */
-	endp = (struct ioendpoint_socket *) ioendpoint_alloc(&ioendpoint_socket_ops);
-	if (endp == NULL)
-		return -1;
+	/* convert buffers */
+	iov = alloca(nbufs * sizeof(*iov));
+	for (i = 0; i < nbufs; i++) {
+		iov[i].iov_base = bufs[i].base;
+		iov[i].iov_len = bufs[i].len;
+	}
+
+	if (t != NULL) {
+		struct ioendpoint_socket *to;
+		struct msghdr msghdr;
+
+		/* convert endpoint address */
+		to = (struct ioendpoint_socket *)
+		    ioendpoint_convert(t, &ioendpoint_socket_ops);
+		if (to == NULL) {
+			errno = EAFNOSUPPORT;
+			return -1;
+		}
+
+		/* set up the message header */
+		memset(&msghdr, '\0', sizeof(msghdr));
+		msghdr.msg_name = &to->addr;
+		msghdr.msg_namelen = to->addrlen;
+		msghdr.msg_iov = iov;
+		msghdr.msg_iovlen = nbufs;
+
+		/* perform the send */
+		size = sendmsg(queue->sock, &msghdr, 0);
+
+		/* release the endpoint address */
+		ioendpoint_release((struct ioendpoint *) to);
+	} else {
+		/* perform the send */
+		size = writev(queue->sock, iov, nbufs);
+	}
+
+	return size;
+}
+
+static ssize_t
+socket_recv(struct ioqueue *q, size_t nbufs, const struct iobuf *bufs,
+            struct ioendpoint **f)
+{
+	struct ioqueue_socket	*queue = (struct ioqueue_socket *) q;
+	struct iovec		*iov;
+	size_t			 i;
+	ssize_t			 size;
 
 	/* convert buffers */
 	iov = alloca(nbufs * sizeof(*iov));
@@ -233,45 +186,59 @@ socket_recvfrom(struct ioqueue *q, const struct iobuf *bufs, size_t nbufs,
 		iov[i].iov_len = bufs[i].len;
 	}
 
-	/* set up the message header */
-	memset(&msghdr, '\0', sizeof(msghdr));
-	msghdr.msg_name = &endp->addr;
-	msghdr.msg_namelen = sizeof(endp->addr);
-	msghdr.msg_iov = iov;
-	msghdr.msg_iovlen = nbufs;
+	if (f != NULL) {
+		struct ioendpoint_socket *from;
+		struct msghdr msghdr;
 
-	/* perform the receive */
-	size = recvmsg(queue->sock, &msghdr, 0);
-	if (size < 0) {
-		ioendpoint_release((struct ioendpoint *) endp);
-		return -1;
-	}
+		/* create the endpoint to hold the sender address */
+		from = (struct ioendpoint_socket *)
+		    ioendpoint_alloc(&ioendpoint_socket_ops);
+		if (from == NULL)
+			return -1;
 
-	/* set the address length of the address */
-	switch (endp->addr.ss_family) {
+		/* set up the message header */
+		memset(&msghdr, '\0', sizeof(msghdr));
+		msghdr.msg_name = &from->addr;
+		msghdr.msg_namelen = sizeof(from->addr);
+		msghdr.msg_iov = iov;
+		msghdr.msg_iovlen = nbufs;
+
+		/* perform the receive */
+		size = recvmsg(queue->sock, &msghdr, 0);
+		if (size < 0) {
+			ioendpoint_release((struct ioendpoint *) from);
+			return -1;
+		}
+
+		/* set the address length of the address */
+		switch (from->addr.ss_family) {
 #ifdef AF_INET
-	case AF_INET:
-		endp->addrlen = sizeof(struct sockaddr_in);
-		break;
+		case AF_INET:
+			from->addrlen = sizeof(struct sockaddr_in);
+			break;
 #endif
 
 #ifdef AF_INET6
-	case AF_INET6:
-		endp->addrlen = sizeof(struct sockaddr_in6);
-		break;
+		case AF_INET6:
+			from->addrlen = sizeof(struct sockaddr_in6);
+			break;
 #endif
 
 #ifdef AF_UNIX
-	case AF_UNIX:
-		endp->addrlen = sizeof(struct sockaddr_un);
-		break;
+		case AF_UNIX:
+			from->addrlen = sizeof(struct sockaddr_un);
+			break;
 #endif
 
-	default:
-		assert(!"can't happen");
-	}
+		default:
+			assert(!"can't happen");
+		}
 
-	*e = (struct ioendpoint *) endp;
+		*f = (struct ioendpoint *) from;
+	} else {
+		/* perform the receive */
+		size = readv(queue->sock, iov, nbufs);
+	}
 
 	return size;
 }
@@ -545,7 +512,7 @@ ioqueue_alloc_socket(int af, struct ioendpoint *t, struct ioendpoint *f,
 	if (queue == NULL)
 		return NULL;
 
-	queue->queue.ops = &ioqueue_socket_ops;
+	queue->queue.ops = &socket_ops;
 	queue->af = af;
 
 	/* create the socket */

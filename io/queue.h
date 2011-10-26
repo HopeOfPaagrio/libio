@@ -64,63 +64,36 @@ struct ioqueue_ops {
 	 * Send a datagram through an I/O queue.
 	 *
 	 * \param queue	I/O queue to send the datagram through.
-	 * \param bufs	Array of buffers holding the datagram to send.
 	 * \param nbufs	Number of buffers.
-	 * \param endp	If not \c NULL, the endpoint to send the datagram
+	 * \param bufs	Array of buffers holding the datagram to send.
+	 * \param to	If not \c NULL, the endpoint to send the datagram
 	 *		to. Otherwise, the datagram is sent to the default
 	 *		endpoint.
-	 * \returns	On success, 0 is returned. Otherwise, -1 is returned
-	 *		and \e errno is set to indicate the error.
+	 * \returns	On success, the length of the datagram sent is
+	 *		returned. Otherwise, -1 is returned and \e errno is
+	 *		set to indicate the error.
 	 */
-	int
-	(*send)(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs);
-
-	/**
-	 * Send a datagram through an I/O queue to a specific endpoint.
-	 *
-	 * \param queue	I/O queue to send the datagram through.
-	 * \param bufs	Array of buffers holding the datagram to send.
-	 * \param nbufs	Number of buffers.
-	 * \param endp	Endpoint to send the datagram to.
-	 * \returns	On success, 0 is returned. Otherwise, -1 is returned
-	 *		and \e errno is set to indicate the error.
-	 */
-	int
-	(*sendto)(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs,
-	          struct ioendpoint *endp);
+	ssize_t
+	(*send)(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+	        struct ioendpoint *to);
 
 	/**
 	 * Receive a datagram from an I/O queue.
 	 *
 	 * \param queue	I/O queue from which to receive the datagram.
-	 * \param bufs	Array of buffers to place the datagram contents.
 	 * \param nbufs	Number of buffers.
+	 * \param bufs	Array of buffers to place the datagram contents.
+	 * \param from	If not \c NULL, a pointer to the location to store
+	 *		the endpoint the datagram was received from. The
+	 *		caller is responsible for calling
+	 *		ioendpoint_release() to free the endpoint.
 	 * \returns	On success, the length of the received datagram is returned.
 	 *		Otherwise, -1 is returned and \e errno is set to indicate
 	 *		the error.
-	 * \note	If the source endpoint is provided, the caller must call
-	 *		ioendpoint_release() on the endpoint to free it.
 	 */
 	ssize_t
-	(*recv)(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs);
-
-	/**
-	 * Receive a datagram from an I/O queue and record its source.
-	 *
-	 * \param queue	I/O queue from which to receive the datagram.
-	 * \param bufs	Array of buffers to place the datagram contents.
-	 * \param nbufs	Number of buffers.
-	 * \param endp	Pointer to the location to store the endpoint the
-	 *		datagram was received from. The caller is
-	 *		responsible for calling ioendpoint_release() to free
-	 *		the endpoint.
-	 * \returns	On success, the length of the received datagram is
-	 *		returned. Otherwise, -1 is returned and \e errno is
-	 *		set to indicate the error.
-	 */
-	ssize_t
-	(*recvfrom)(struct ioqueue *queue, const struct iobuf *bufs,
-	            size_t nbufs, struct ioendpoint **endp);
+	(*recv)(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+	        struct ioendpoint **from);
 
 	/**
 	 * Create an I/O event for a I/O queue that is triggered whenever a
@@ -223,56 +196,36 @@ IOAPI ssize_t
 ioqueue_nextsize(struct ioqueue *queue);
 
 /**
- * Send a datagram through an I/O queue to the default endpoint.
+ * Send a datagram through an I/O queue.
  *
  * \param queue	I/O queue through which to send the datagram.
  * \param buf	Buffer holding the datagram to send.
  * \param len	Length of the buffer.
- * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
- *		errno is set to indicate the error.
+ * \param to	If not \c NULL, the endpoint to send the datagram to.
+ *		Otherwise, the datagram is sent to the default endpoint.
+ * \returns	On success, the length of the datagram sent is returned.
+ *		Otherwise, -1 is returned and \e errno is set to indicate
+ *		the error.
  */
-IOAPI int
-ioqueue_send(struct ioqueue *queue, const void *buf, size_t len);
+IOAPI ssize_t
+ioqueue_send(struct ioqueue *queue, const void *buf, size_t len,
+             struct ioendpoint *to);
 
 /**
- * Send a datagram through an I/O queue to the default endpoint.
+ * Send a datagram through an I/O queue.
  *
  * \param queue	I/O queue through which to send the datagram.
- * \param bufs	Array of buffers holding the datagram to send.
  * \param nbufs	Number of buffers.
- * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
- *		errno is set to indicate the error.
- */
-IOAPI int
-ioqueue_sendv(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs);
-
-/**
- * Send a datagram through an I/O queue to a specific endpoint.
- *
- * \param queue	I/O queue through which to send the datagram.
- * \param buf	Buffer holding the datagram to send.
- * \param len	Length of the buffer.
- * \param endp	Endpoint to send the datagram to.
- * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
- *		errno is set to indicate the error.
- */
-IOAPI int
-ioqueue_sendto(struct ioqueue *queue, const void *buf, size_t len,
-               struct ioendpoint *endp);
-
-/**
- * Send a datagram through an I/O queue to a specific endpoint.
- *
- * \param queue	I/O queue through which to send the datagram.
  * \param bufs	Array of buffers holding the datagram to send.
- * \param nbufs	Number of buffers.
- * \param endp	Endpoint to send the datagram to.
- * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
- *		errno is set to indicate the error.
+ * \param to	If not \c NULL, the endpoint to send the datagram to.
+ *		Otherwise, the datagram is sent to the default endpoint.
+ * \returns	On success, the length of the datagram sent is returned.
+ *		Otherwise, -1 is returned and \e errno is set to indicate
+ *		the error.
  */
-IOAPI int
-ioqueue_sendtov(struct ioqueue *queue, const struct iobuf *bufs,
-                size_t nbufs, struct ioendpoint *endp);
+IOAPI ssize_t
+ioqueue_sendv(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+              struct ioendpoint *to);
 
 /**
  * Receive a datagram from an I/O queue.
@@ -280,12 +233,17 @@ ioqueue_sendtov(struct ioqueue *queue, const struct iobuf *bufs,
  * \param queue	I/O queue from which to receive the datagram.
  * \param buf	Buffer to place the datagram contents.
  * \param len	Length of the buffer.
+ * \param from	If not \c NULL, a pointer to the location to store the
+ *		endpoint the datagram was received from. The caller is
+ *		responsible for calling ioendpoint_release() to free the
+ *		endpoint.
  * \returns	On success, the length of the received datagram is returned.
  *		Otherwise, -1 is returned and \e errno is set to indicate
  *		the error.
  */
 IOAPI ssize_t
-ioqueue_recv(struct ioqueue *queue, void *buf, size_t len);
+ioqueue_recv(struct ioqueue *queue, void *buf, size_t len,
+             struct ioendpoint **from);
 
 /**
  * Receive a datagram from an I/O queue and allocate a buffer for it.
@@ -294,78 +252,35 @@ ioqueue_recv(struct ioqueue *queue, void *buf, size_t len);
  * \param buf	Buffer to allocate and set to the datagram's contents. The
  *		caller becomes responsible for freeing the memory pointed to
  *		by the \e base member of \a buf.
+ * \param from	If not \c NULL, a pointer to the location to store the
+ *		endpoint the datagram was received from. The caller is
+ *		responsible for calling ioendpoint_release() to free the
+ *		endpoint.
  * \returns	On success, the length of the received datagram is returned.
  *		Otherwise, -1 is returned and \e errno is set to indicate
  *		the error.
  */
 IOAPI ssize_t
-ioqueue_recva(struct ioqueue *queue, struct iobuf *buf);
+ioqueue_recva(struct ioqueue *queue, struct iobuf *buf,
+              struct ioendpoint **from);
 
 /**
  * Receive a datagram from an I/O queue.
  *
  * \param queue	I/O queue from which to receive the datagram.
- * \param bufs	Array of buffers to place the datagram contents.
  * \param nbufs	Number of buffers.
- * \returns	On success, the length of the received datagram is returned.
- *		Otherwise, -1 is returned and \e errno is set to indicate
- *		the error.
- */
-IOAPI ssize_t
-ioqueue_recvv(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs);
-
-/**
- * Receive a datagram from an I/O queue and record its source.
- *
- * \param queue	I/O queue from which to receive the datagram.
- * \param buf	Buffer to place the datagram contents.
- * \param len	Length of the buffer.
- * \param endp	Pointer to the location to store the endpoint the datagram
- *		was received from. The caller is responsible for calling
- *		ioendpoint_release() to free the endpoint.
- * \returns	On success, the length of the received datagram is returned.
- *		Otherwise, -1 is returned and \e errno is set to indicate
- *		the error.
- */
-IOAPI ssize_t
-ioqueue_recvfrom(struct ioqueue *queue, void *buf, size_t len,
-                 struct ioendpoint **endp);
-
-/**
- * Receive a datagram from an I/O queue, record its source and allocate a
- * buffer for it.
- *
- * \param queue	I/O queue from which to receive the datagram.
- * \param buf	Buffer to allocate and set to the datagram's contents. The
- *		caller becomes responsible for freeing the memory pointed to
- *		by the \e base member of \a buf.
- * \param endp	Pointer to the location to store the endpoint the datagram
- *		was received from. The caller is responsible for calling
- *		ioendpoint_release() to free the endpoint.
- * \returns	On success, the length of the received datagram is returned.
- *		Otherwise, -1 is returned and \e errno is set to indicate
- *		the error.
- */
-IOAPI ssize_t
-ioqueue_recvfroma(struct ioqueue *queue, struct iobuf *buf,
-                  struct ioendpoint **endp);
-
-/**
- * Receive a datagram from an I/O queue and record its source.
- *
- * \param queue	I/O queue from which to receive the datagram.
  * \param bufs	Array of buffers to place the datagram contents.
- * \param nbufs	Number of buffers.
- * \param endp	Pointer to the location to store the endpoint the datagram
- *		was received from. The caller is responsible for calling
- *		ioendpoint_release() to free the endpoint.
+ * \param from	If not \c NULL, a pointer to the location to store the
+ *		endpoint the datagram was received from. The caller is
+ *		responsible for calling ioendpoint_release() to free the
+ *		endpoint.
  * \returns	On success, the length of the received datagram is returned.
  *		Otherwise, -1 is returned and \e errno is set to indicate
  *		the error.
  */
 IOAPI ssize_t
-ioqueue_recvfromv(struct ioqueue *queue, const struct iobuf *bufs,
-                  size_t nbufs, struct ioendpoint **endp);
+ioqueue_recvv(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+              struct ioendpoint **from);
 
 /**
  * Create an I/O event for a I/O queue that is triggered whenever a

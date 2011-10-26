@@ -61,65 +61,45 @@ ioqueue_nextsize(struct ioqueue *queue)
 	return queue->ops->nextsize(queue);
 }
 
-int
-ioqueue_send(struct ioqueue *queue, const void *buf, size_t len)
+ssize_t
+ioqueue_send(struct ioqueue *queue, const void *buf, size_t len,
+            struct ioendpoint *to)
 {
 	struct iobuf iobuf;
 
 	iobuf.base = (void *) buf;
 	iobuf.len = len;
 
-	return ioqueue_sendv(queue, &iobuf, 1);
+	return ioqueue_sendv(queue, 1, &iobuf, to);
 }
 
-int
-ioqueue_sendv(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs)
+ssize_t
+ioqueue_sendv(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+              struct ioendpoint *to)
 {
 	if (queue->ops->send == NULL) {
 		errno = EBADF;
 		return -1;
 	}
 
-	return queue->ops->send(queue, bufs, nbufs);
-}
-
-int
-ioqueue_sendto(struct ioqueue *queue, const void *buf, size_t len,
-               struct ioendpoint *endp)
-{
-	struct iobuf iobuf;
-
-	iobuf.base = (void *) buf;
-	iobuf.len = len;
-
-	return ioqueue_sendtov(queue, &iobuf, 1, endp);
-}
-
-int
-ioqueue_sendtov(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs,
-                struct ioendpoint *endp)
-{
-	if (queue->ops->sendto == NULL) {
-		errno = EBADF;
-		return -1;
-	}
-
-	return queue->ops->sendto(queue, bufs, nbufs, endp);
+	return queue->ops->send(queue, nbufs, bufs, to);
 }
 
 ssize_t
-ioqueue_recv(struct ioqueue *queue, void *buf, size_t len)
+ioqueue_recv(struct ioqueue *queue, void *buf, size_t len,
+             struct ioendpoint **from)
 {
 	struct iobuf iobuf;
 
 	iobuf.base = buf;
 	iobuf.len = len;
 
-	return ioqueue_recvv(queue, &iobuf, 1);
+	return ioqueue_recvv(queue, 1, &iobuf, from);
 }
 
 ssize_t
-ioqueue_recva(struct ioqueue *queue, struct iobuf *buf)
+ioqueue_recva(struct ioqueue *queue, struct iobuf *buf,
+              struct ioendpoint **from)
 {
 	ssize_t size;
 
@@ -132,7 +112,7 @@ ioqueue_recva(struct ioqueue *queue, struct iobuf *buf)
 	if (buf->base == NULL)
 		return -1;
 
-	size = ioqueue_recvv(queue, buf, 1);
+	size = ioqueue_recvv(queue, 1, buf, from);
 	if (size < 0)
 		free(buf->base);
 	buf->len = (size_t) size;
@@ -141,61 +121,15 @@ ioqueue_recva(struct ioqueue *queue, struct iobuf *buf)
 }
 
 ssize_t
-ioqueue_recvv(struct ioqueue *queue, const struct iobuf *bufs, size_t nbufs)
+ioqueue_recvv(struct ioqueue *queue, size_t nbufs, const struct iobuf *bufs,
+              struct ioendpoint **from)
 {
 	if (queue->ops->recv == NULL) {
 		errno = EBADF;
 		return -1;
 	}
 
-	return queue->ops->recv(queue, bufs, nbufs);
-}
-
-ssize_t
-ioqueue_recvfrom(struct ioqueue *queue, void *buf, size_t len,
-                 struct ioendpoint **endp)
-{
-	struct iobuf iobuf;
-
-	iobuf.base = buf;
-	iobuf.len = len;
-
-	return ioqueue_recvfromv(queue, &iobuf, 1, endp);
-}
-
-ssize_t
-ioqueue_recvfroma(struct ioqueue *queue, struct iobuf *buf,
-                  struct ioendpoint **endp)
-{
-	ssize_t size;
-
-	size = ioqueue_nextsize(queue);
-	if (size < 0)
-		return -1;
-
-	buf->len = (size_t) size;
-	buf->base = malloc(buf->len);
-	if (buf->base == NULL)
-		return -1;
-
-	size = ioqueue_recvfromv(queue, buf, 1, endp);
-	if (size < 0)
-		free(buf->base);
-	buf->len = (size_t) size;
-
-	return size;
-}
-
-ssize_t
-ioqueue_recvfromv(struct ioqueue *queue, const struct iobuf *bufs,
-                  size_t nbufs, struct ioendpoint **endp)
-{
-	if (queue->ops->recvfrom == NULL) {
-		errno = EBADF;
-		return -1;
-	}
-
-	return queue->ops->recvfrom(queue, bufs, nbufs, endp);
+	return queue->ops->recv(queue, nbufs, bufs, from);
 }
 
 struct ioevent *
