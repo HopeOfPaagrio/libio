@@ -112,6 +112,22 @@ IOAPI struct ioevent *
 ioevent_child(pid_t child, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt);
 
 /**
+ * Allocate an event which is dispatched when a flag is set. The event can
+ * be attached to any I/O loop that was allocated with \c #IOEVENT_FLAG
+ * set.
+ *
+ * \param flag	Pointer to the flag to monitor.
+ * \param cb	Callback to invoke when the flag is set.
+ * \param arg	Additional argument to pass to \a cb.
+ * \param opt	Event options.
+ * \return	On success, a pointer to a newly allocated event is
+ *		returned. Otherwise, \c NULL is returned and \e errno is set
+ *		to indicate the error.
+ */
+IOAPI struct ioevent *
+ioevent_flag(bool *flag, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt);
+
+/**
  * Free an event. If still attached to an I/O loop, the event is detached.
  *
  * \param event	Event to free.

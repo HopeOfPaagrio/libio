@@ -172,6 +172,14 @@ once_more_with_timers(struct ioloop *loop, const struct timeval *start,
 	struct ioevent_timer	*timer = NULL;
 	struct timeval		 tv;
 	unsigned int		 i;
+	struct ioevent_flag	*evf;
+
+	/* check all flags */
+	LIST_FOREACH(evf, &loop->flags, flags)
+		if (*evf->flag)
+			ioevent_queue((struct ioevent *) evf);
+	if (!LIST_EMPTY(&loop->dispatchq))
+		return 0;
 
 	/* calculate the timeout */
 	if (loop->numtimers != 0) {
@@ -295,7 +303,7 @@ ioloop_alloc(enum ioevent_kind kinds)
 	/* look for an appropriate backend */
 	for (i = 0; i < nitems(backends); i++) {
 		/* check if it's supported */
-		if (((backends[i]->kinds | IOEVENT_TIMER) & kinds) != kinds)
+		if (((backends[i]->kinds | IOEVENT_TIMER | IOEVENT_FLAG) & kinds) != kinds)
 			continue;
 
 		/* allocate and initialise the loop */
@@ -324,6 +332,8 @@ ioloop_alloc(enum ioevent_kind kinds)
 void
 ioloop_free(struct ioloop *loop)
 {
+	struct ioevent_flag *evf, *next;
+
 	/* tear down the backend */
 	loop->backend->done(loop);
 
@@ -331,6 +341,10 @@ ioloop_free(struct ioloop *loop)
 	while (loop->numtimers != 0)
 		ioevent_detach((struct ioevent *) loop->timers[loop->numtimers - 1]);
 	free(loop->timers);
+
+	/* detach all flags */
+	LIST_FOREACH_SAFE(evf, &loop->flags, flags, next)
+		ioevent_detach((struct ioevent *) evf);
 
 	free(loop);
 }
@@ -421,12 +435,20 @@ ioevent_attach(struct ioevent *event, struct ioloop *loop)
 	}
 
 	/* attach the event */
-	if (event->kind == IOEVENT_TIMER) {
+	switch (event->kind) {
+	case IOEVENT_TIMER:
 		if (timer_attach(loop, (struct ioevent_timer *) event) < 0)
 			return -1;
-	} else {
+		break;
+
+	case IOEVENT_FLAG:
+		LIST_INSERT_LAST(&loop->flags, (struct ioevent_flag *) event, flags);
+		break;
+
+	default:
 		if (loop->backend->attach(loop, event) < 0)
 			return -1;
+		break;
 	}
 
 	event->loop = loop;
@@ -445,12 +467,20 @@ ioevent_detach(struct ioevent *event)
 	}
 
 	/* detach the event */
-	if (event->kind == IOEVENT_TIMER) {
+	switch (event->kind) {
+	case IOEVENT_TIMER:
 		if (timer_detach(event->loop, (struct ioevent_timer *) event) < 0)
 			return -1;
-	} else {
+		break;
+
+	case IOEVENT_FLAG:
+		LIST_REMOVE(&event->loop->flags, (struct ioevent_flag *) event, flags);
+		break;
+
+	default:
 		if (event->loop->backend->detach(event->loop, event) < 0)
 			return -1;
+		break;
 	}
 
 	/* remove from the dispatch queue if queued */

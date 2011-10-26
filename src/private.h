@@ -56,6 +56,7 @@ struct ioloop {
 	unsigned int		 numtimers,	/* number of timer events */
 				 maxtimers;	/* max. number of timer events */
 	struct timeval		 timerdebt;	/* time to be sub'd from timers */
+	LIST_HEAD(, ioevent_flag) flags;	/* list of flag events */
 	LIST_HEAD(, ioevent)	 dispatchq;	/* dispatch queue */
 	bool			 broken;	/* ioloop_break() called */
 };
@@ -91,6 +92,12 @@ struct ioevent_signal {
 struct ioevent_child {
 	struct ioevent		 event;
 	pid_t			 child;
+};
+
+struct ioevent_flag {
+	struct ioevent		 event;
+	bool			*flag;
+	LIST_ENTRY(, ioevent_flag) flags;
 };
 
 static inline bool

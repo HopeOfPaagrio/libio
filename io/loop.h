@@ -33,8 +33,10 @@ enum ioevent_kind {
 				 *   allocate using ioevent_timer(). */
 	IOEVENT_SIGNAL	= 0x08,	/**< Signal was delivered to the process;
 				 *   allocate using ioevent_signal(). */
-	IOEVENT_CHILD	= 0x10	/**< Child process terminated;
+	IOEVENT_CHILD	= 0x10,	/**< Child process terminated;
 				 *   allocate using ioevent_child(). */
+	IOEVENT_FLAG	= 0x20	/**< Flag was set; allocate using
+				 *   ioevent_flag(). */
 };
 
 /**

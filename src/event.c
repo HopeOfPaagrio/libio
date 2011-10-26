@@ -100,6 +100,20 @@ ioevent_child(pid_t pid, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt)
 	return (struct ioevent *) event;
 }
 
+struct ioevent *
+ioevent_flag(bool *flag, ioevent_cb_t *cb, void *arg, enum ioevent_opt opt)
+{
+	struct ioevent_flag *event;
+
+	event = calloc(1, sizeof(*event));
+	if (event != NULL) {
+		ioevent_init((struct ioevent *) event, IOEVENT_FLAG, cb, arg, opt);
+		event->flag = flag;
+	}
+
+	return (struct ioevent *) event;
+}
+
 void
 ioevent_free(struct ioevent *event)
 {
