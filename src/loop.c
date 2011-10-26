@@ -32,21 +32,21 @@ timer_insert(struct ioloop *loop, struct ioevent_timer *evt)
 	unsigned int base, pos, limit;
 
 	/* find insertion point */
-	pos = base = 0;
-	for (limit = loop->numtimers; limit != 0; limit >>= 1) {
-		pos = base + (limit >> 1);
+	base = 0;
+	for (limit = loop->numtimers; limit != 0; limit /= 2) {
+		pos = base + limit / 2;
 
 		/* proceed with right-hand side? */
 		if (timercmp(&evt->remain, &loop->timers[pos]->remain, >)) {
-			base = pos;
+			base = pos + 1;
 			limit--;
 		}
 	}
 
 	/* insert here */
-	memmove(loop->timers + pos + 1, loop->timers + pos,
-	    (loop->numtimers - pos) * sizeof(loop->timers[0]));
-	loop->timers[pos] = evt;
+	memmove(loop->timers + base + 1, loop->timers + base,
+	    (loop->numtimers - base) * sizeof(loop->timers[0]));
+	loop->timers[base] = evt;
 	loop->numtimers++;
 
 	return 0;
@@ -58,34 +58,34 @@ timer_remove(struct ioloop *loop, struct ioevent_timer *evt)
 	unsigned int base, pos, limit;
 
 	/* find insertion point */
-	pos = base = 0;
-	for (limit = loop->numtimers; limit != 0; limit >>= 1) {
-		pos = base + (limit >> 1);
+	base = 0;
+	for (limit = loop->numtimers; limit != 0; limit /= 2) {
+		pos = base + limit / 2;
 
 		/* proceed with right-hand side? */
 		if (timercmp(&evt->remain, &loop->timers[pos]->remain, >)) {
-			base = pos;
+			base = pos + 1;
 			limit--;
 		}
 	}
 
 	/* we may have found another timer with the same remaining time, so
 	 * we'll need to search linearly for the right one */
-	while (pos < loop->numtimers && loop->timers[pos] != evt)
-		pos++;
+	while (base < loop->numtimers && loop->timers[base] != evt)
+		base++;
 
 	/* did we run out of timers? */
-	if (pos >= loop->numtimers) {
+	if (base >= loop->numtimers) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	assert(loop->timers[pos] == evt);
+	assert(loop->timers[base] == evt);
 
 	/* remove the timer */
 	loop->numtimers--;
-	memmove(loop->timers + pos, loop->timers + pos + 1,
-	    (loop->numtimers - pos) * sizeof(loop->timers[0]));
+	memmove(loop->timers + base, loop->timers + base + 1,
+	    (loop->numtimers - base) * sizeof(loop->timers[0]));
 
 	return 0;
 }
@@ -93,10 +93,14 @@ timer_remove(struct ioloop *loop, struct ioevent_timer *evt)
 static int
 timer_reset(struct ioevent_timer *evt)
 {
+	static const struct timeval zero = { 0, 0 };
+
 	if (timer_remove(evt->event.loop, evt) < 0)
 		return -1;
 
-	evt->remain = evt->tv;
+	timeradd(&evt->remain, &evt->tv, &evt->remain);
+	if (timercmp(&evt->remain, &zero, <) < 0)
+		evt->remain = zero;
 
 	if (timer_insert(evt->event.loop, evt) < 0)
 		return -1;
