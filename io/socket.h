@@ -25,6 +25,7 @@ IO_BEGIN_DECLS
  * Actually in <sys/socket.h>, but this is for convenience
  */
 struct sockaddr;
+struct sockaddr_storage;
 
 /**
  * Socket endpoint operations.
@@ -43,7 +44,18 @@ ioendpoint_socket_ops;
  *		to free the endpoint.
  */
 IOAPI struct ioendpoint *
-ioendpoint_alloc_socket(const struct sockaddr *addr);
+ioendpoint_alloc_sockaddr(const struct sockaddr *addr);
+
+/**
+ * Convert a socket endpoint to a socket address.
+ *
+ * \param endp	Endpoint holding a socket address.
+ * \param addr	Location to store the endpoint's socket address into.
+ * \returns	On success, 0 is returned. Otherwise, -1 is returned and \e
+ *		errno is set to indicate the error.
+ */
+IOAPI int
+ioendpoint_sockaddr(struct ioendpoint *endp, struct sockaddr_storage *addr);
 
 /**
  * Allocate a new I/O queue communicating over a socket.

@@ -176,7 +176,7 @@ socket_compare(struct ioendpoint *l, struct ioendpoint *r)
 }
 
 struct ioendpoint *
-ioendpoint_alloc_socket(const struct sockaddr *addr)
+ioendpoint_alloc_sockaddr(const struct sockaddr *addr)
 {
 	struct ioendpoint_socket *endp;
 
@@ -215,4 +215,21 @@ ioendpoint_alloc_socket(const struct sockaddr *addr)
 	}
 
 	return (struct ioendpoint *) endp;
+}
+
+int
+ioendpoint_sockaddr(struct ioendpoint *e, struct sockaddr_storage *addr)
+{
+	struct ioendpoint_socket	*endp;
+
+	endp = (struct ioendpoint_socket *)
+	    ioendpoint_convert(e, &ioendpoint_socket_ops);
+	if (endp == NULL) {
+		errno = EAFNOSUPPORT;
+		return -1;
+	}
+
+	*addr = endp->addr;
+
+	return 0;
 }
