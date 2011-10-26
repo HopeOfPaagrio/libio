@@ -129,6 +129,10 @@ limit_detach(struct ioqueue *q)
 {
 	struct ioqueue_limit *queue = (struct ioqueue_limit *) q;
 
+	/* detach ourselves */
+	limit_stop(queue);
+	queue->loop = NULL;
+
 	return ioqueue_detach(queue->base);
 }
 
@@ -159,6 +163,7 @@ limit_send(struct ioqueue *q, size_t nbufs, const struct iobuf *bufs,
 	if (size > 0) {
 		queue->send_sec -= min((size_t) size, queue->send_sec);
 		queue->send_ready = false;
+		limit_trigger(queue);
 	}
 
 	return size;
@@ -175,6 +180,7 @@ limit_recv(struct ioqueue *q, size_t nbufs, const struct iobuf *bufs,
 	if (size > 0) {
 		queue->recv_sec -= min((size_t) size, queue->recv_sec);
 		queue->recv_ready = false;
+		limit_trigger(queue);
 	}
 
 	return size;
@@ -262,6 +268,9 @@ limit_start(struct ioqueue_limit *queue)
 static int
 limit_trigger(struct ioqueue_limit *queue)
 {
+	if (queue->loop == NULL)
+		return 0;
+
 	if ((queue->send_rate == 0 || queue->send_sec >= queue->send_mark) &&
 	    !ioevent_attached(queue->send_event) &&
 	    ioevent_attach(queue->send_event, queue->loop) < 0)
@@ -304,6 +313,9 @@ limit_writable(int UNUSED(num), void *arg)
 {
 	struct ioqueue_limit *queue = (struct ioqueue_limit *) arg;
 
+	if (queue->send_ready)
+		ioevent_detach(queue->send_event);
+
 	queue->send_ready = true;
 }
 
@@ -311,6 +323,9 @@ static void
 limit_readable(int UNUSED(num), void *arg)
 {
 	struct ioqueue_limit *queue = (struct ioqueue_limit *) arg;
+
+	if (queue->recv_ready)
+		ioevent_detach(queue->recv_event);
 
 	queue->recv_ready = true;
 }
