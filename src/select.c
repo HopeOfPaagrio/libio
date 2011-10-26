@@ -261,7 +261,7 @@ go(struct ioloop *loop, const struct timeval *timeout)
 
 	/* handle the result */
 	if (n < 0)
-		return -1;
+		return errno == EINTR? 0 : -1;
 	if (n == 0)
 		return 0;
 
