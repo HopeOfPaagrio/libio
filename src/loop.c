@@ -487,8 +487,10 @@ ioevent_detach(struct ioevent *event)
 	}
 
 	/* remove from the dispatch queue if queued */
-	if (event->opt & IOEVENT_QUEUED)
+	if (event->opt & IOEVENT_QUEUED) {
 		LIST_REMOVE(&event->loop->dispatchq, event, dispatchq);
+		event->opt &= ~IOEVENT_QUEUED;
+	}
 
 	event->loop->num--;
 	event->loop = NULL;
